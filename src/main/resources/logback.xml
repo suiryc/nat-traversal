@@ -1,0 +1,18 @@
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- Encoders are assigned the type ch.qos.logback.classic.PatternLayoutEncoder by default -->
+    <encoder>
+      <!-- <pattern>%date{ISO8601} %-5level %logger{48} %X{sourceThread} - %msg%n</pattern> -->
+      <pattern>%date{ISO8601} %-5level %logger{48} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- The level of root is set to DEBUG by default -->
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <logger name="nat.traversal" level="TRACE" />
+
+</configuration>
