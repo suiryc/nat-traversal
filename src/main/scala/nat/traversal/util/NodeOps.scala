@@ -1,6 +1,6 @@
 package nat.traversal.util
 
-import com.typesafe.scalalogging.slf4j.Logging
+import grizzled.slf4j.Logging
 import java.net.URL
 import scala.xml.{Node, NodeSeq}
 

@@ -3,7 +3,7 @@ package nat.traversal.upnp.ssdp
 import akka.actor.{Actor, ActorRef, Props}
 import akka.io.{IO, Udp}
 import akka.util.ByteString
-import com.typesafe.scalalogging.slf4j.Logging
+import grizzled.slf4j.Logging
 import java.net.{InetAddress, MulticastSocket}
 import nat.traversal.upnp.UPnPManager
 import nat.traversal.util.{HTTPParser, RFC2616, UdpMc, UdpMcService}

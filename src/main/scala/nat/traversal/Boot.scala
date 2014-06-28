@@ -2,7 +2,7 @@ package nat.traversal
 
 import akka.actor.{ActorSystem, Props}
 import akka.io.{IO, Udp}
-import com.typesafe.scalalogging.slf4j.Logging
+import grizzled.slf4j.Logging
 import java.net.{InetAddress, MulticastSocket}
 import nat.traversal.util.{UdpMc, UdpMcService}
 import nat.traversal.upnp.UPnPManager

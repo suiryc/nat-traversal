@@ -3,13 +3,13 @@ package nat.traversal.util
 import akka.actor.{Actor, ActorRef}
 import akka.io.Udp
 import akka.util.ByteString
-import com.typesafe.scalalogging.slf4j.Logging
+import grizzled.slf4j.Logging
 import java.net.{
   DatagramPacket,
   InetSocketAddress,
   MulticastSocket
 }
-import scala.concurrent.ops._
+import scala.concurrent.Future
 
 /* Mimic original Udp class hierarchy */
 object UdpMc {
@@ -57,8 +57,9 @@ class UdpMcService
   }
 
   private def listen(handler: ActorRef, socket: MulticastSocket) {
-    /* XXX - deprecated, replace by explicit new Thread(new Runnable()) ? */
-    spawn {
+    /* XXX - is a Future the correct way to replace deprecated scala.concurrent.ops.spawn ? */
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future {
       val dgramBuffer = new Array[Byte](1 * 1024)
       val dgram = new DatagramPacket(dgramBuffer, dgramBuffer.length)
 

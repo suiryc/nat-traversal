@@ -9,7 +9,7 @@ import java.net.{
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.io.{IO, Udp}
 import akka.util.ByteString
-import com.typesafe.scalalogging.slf4j.Logging
+import grizzled.slf4j.Logging
 import java.net.URL
 import nat.traversal.util.HTTPParser
 import nat.traversal.util.RFC2616
