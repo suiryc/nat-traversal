@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
   "org.specs2"          %%  "specs2"        % versions("specs2") % "test"
 )
 
-seq(Revolver.settings: _*)
+Seq(Revolver.settings: _*)
 
 
 pomExtra := (

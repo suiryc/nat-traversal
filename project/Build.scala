@@ -19,7 +19,7 @@ object NatTraversalBuild extends Build {
   lazy val root = Project(
     id = "nat-traversal",
     base = base,
-    settings = Defaults.defaultSettings ++ Seq(copyPomTask, extCompile)
+    settings = Seq(copyPomTask, extCompile)
   )
 }
 
