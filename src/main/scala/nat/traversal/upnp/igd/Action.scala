@@ -29,10 +29,10 @@ class Action(
   {
     val node: NodeSeq = info.argumentList.filter { argument =>
       argument.direction == ArgumentDirection.in
-    } map { argument =>
+    }.map { argument =>
       args.get(argument.name).map { value =>
         Elem(null, argument.name, Null, TopScope, false, Text(value.toString))
-      } getOrElse(Elem(null, argument.name, Null, TopScope, false))
+      }.getOrElse(Elem(null, argument.name, Null, TopScope, minimizeEmpty = false))
     }
 
     val request = wrap(node)

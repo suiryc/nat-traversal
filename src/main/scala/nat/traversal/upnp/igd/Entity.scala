@@ -88,7 +88,7 @@ class EntityType(
 {
 
   override def toString: String =
-    s"${prefix}:${name}:${version}"
+    s"$prefix:$name:$version"
 
   override def prettyString(builder: StringBuilder, level: Int)
     : StringBuilder =

@@ -1,7 +1,6 @@
 package nat.traversal.util
 
 import grizzled.slf4j.Logging
-import java.net.URL
 import scala.xml.{Node, NodeSeq}
 
 /**
@@ -62,7 +61,7 @@ trait NodeOps extends Logging {
 
       case n =>
         if (n != 1) {
-          logger.debug(s"Found ${n} occurrences of node[${childName}] where 1 expected")
+          logger.debug(s"Found $n occurrences of node[$childName] where 1 expected")
         }
         Some(children(0))
     }
@@ -80,7 +79,7 @@ trait NodeOps extends Logging {
     : Option[T] =
   {
     val converter = implicitly[NodeConverter[T]]
-    getChildOption(node, childName) map { converter.convert(_) }
+    getChildOption(node, childName) map { converter.convert }
   }
 
   /**
@@ -92,7 +91,7 @@ trait NodeOps extends Logging {
    */
   protected def getChild(node: NodeSeq, childName: String): Node =
     getChildOption(node, childName) getOrElse {
-      throw new Error(s"Missing mandatory node[${childName}]")
+      throw new Error(s"Missing mandatory node[$childName]")
     }
 
   /**

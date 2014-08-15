@@ -14,7 +14,7 @@ class SpecVersion(
 ) extends Entity
 {
 
-  override def toString: String = s"${major}.${minor}"
+  override def toString: String = s"$major.$minor"
 
   override def prettyString(builder: StringBuilder, level: Int)
     : StringBuilder =

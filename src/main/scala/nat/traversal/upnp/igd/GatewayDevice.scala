@@ -20,7 +20,7 @@ class GatewayDevice(
 
   /* An IntergetGatewayDevice may have more than one WANDevice. */
   val wanDevices =
-    (device.getDevices("WANDevice").map { wanDevice =>
+    device.getDevices("WANDevice").map { wanDevice =>
       try {
         Some(new WANDevice(wanDevice.desc, localAddress))
       }
@@ -28,7 +28,7 @@ class GatewayDevice(
         case e: Throwable =>
           None
       }
-    }) flatten
+    }.flatten
 
 }
 

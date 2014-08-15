@@ -40,7 +40,7 @@ class WANConnection(
         mappings
     }
 
-    loop(0, Nil) reverse
+    loop(0, Nil).reverse
   }
 
   /**
@@ -71,8 +71,8 @@ class WANConnection(
 
     for (protocol <- _protocols) {
       val _description = description.getOrElse(
-        s"nat-traversal ${protocol} @ ${
-          (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")).format(new Date())
+        s"nat-traversal $protocol @ ${
+          new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
         }"
       )
 
@@ -147,14 +147,14 @@ class PortMapping(
       if (remoteHost == "") "*" else remoteHost
     }:${
       if (externalPort == 0) "*" else externalPort
-    }/${protocol} -> ${internalClient}:${
+    }/$protocol -> $internalClient:${
       if (externalPort == 0) "*" else internalPort
     } ${
       if (enabled) "on" else "off"
     }${
       if (leaseDuration > 0) " during " + leaseDuration + "s"
       else ""
-    } (${description})"
+    } ($description)"
 
 }
 

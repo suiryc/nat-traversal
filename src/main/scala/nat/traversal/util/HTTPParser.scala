@@ -64,9 +64,9 @@ class RFC2616 extends RegexParsers {
       /* Capitalize first letter of each word, and lowercase everything else.
        * Ex: 'aBc-DeF' becomes 'Abc-Def'
        */
-      val cleanedName = name split("-") map { word =>
+      val cleanedName = name.split("-").map { word =>
         word.toLowerCase.capitalize
-      } mkString("-")
+      }.mkString("-")
       cleanedName -> body
   }
 

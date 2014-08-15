@@ -19,8 +19,8 @@ class WANDevice(
    * WANPPPConnection.
    */
 
-  val wanConnections =
-    (getDevices("WANConnectionDevice").map { cnxDevice =>
+  val wanConnections: List[WANConnection] =
+    getDevices("WANConnectionDevice").map { cnxDevice =>
       (for {
         cnxService <- cnxDevice.getServices("WANIPConnection") :::
           cnxDevice.getServices("WANPPPConnection")
@@ -32,7 +32,7 @@ class WANDevice(
           case e: Throwable =>
             None
         }
-      }) flatten
-    }) flatten
+      }).flatten
+    }.flatten
 
 }

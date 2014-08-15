@@ -406,7 +406,7 @@ class SSDPServerService
 
   def receive = httpReceive orElse {
     case UdpMc.Bound =>
-      context.become(ready(sender) orElse httpReceive)
+      context.become(ready(sender()) orElse httpReceive)
   }
 
   def ready(socket: ActorRef): Receive = {
@@ -414,10 +414,10 @@ class SSDPServerService
       /* XXX - use interface IP, and HTTP server port */
       HTTPParser(data.utf8String) match {
         case Left(failure) =>
-          logger.error(s"SSDP server received invalid message from ${remote.getAddress()}: message[${data.utf8String}] error[${failure}]")
+          logger.error(s"SSDP server received invalid message from ${remote.getAddress}: message[${data.utf8String}] error[$failure]")
 
         case Right(httpMsg) =>
-          logger.debug(s"SSDP server received message from ${remote.getAddress()}: ${httpMsg.headers}")
+          logger.debug(s"SSDP server received message from ${remote.getAddress}: ${httpMsg.headers}")
           httpMsg match {
             case request: RFC2616.Request =>
               if ((request.method == "M-SEARCH") &&

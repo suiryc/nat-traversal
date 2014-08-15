@@ -24,7 +24,7 @@ class Argument(
 ) extends Entity
 {
 
-  override def toString: String = s"(${direction})${name}"
+  override def toString: String = s"($direction)$name"
 
   override def prettyString(builder: StringBuilder, level: Int)
     : StringBuilder =

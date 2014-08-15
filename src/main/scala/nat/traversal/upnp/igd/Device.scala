@@ -63,7 +63,7 @@ class Device(
    * @return corresponding service
    */
   def getService(name: String): Option[Service] =
-    getServices(name) headOption
+    getServices(name).headOption
 
   /**
    * Gets devices by name.
@@ -81,7 +81,7 @@ class Device(
    * @return corresponding device
    */
   def getDevice(name: String): Option[Device] =
-    getDevices(name) headOption
+    getDevices(name).headOption
 
 }
 

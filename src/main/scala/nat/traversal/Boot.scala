@@ -1,13 +1,8 @@
 package nat.traversal
 
-import akka.actor.{ActorSystem, Props}
-import akka.io.{IO, Udp}
 import grizzled.slf4j.Logging
-import java.net.{InetAddress, MulticastSocket}
-import nat.traversal.util.{UdpMc, UdpMcService}
 import nat.traversal.upnp.UPnPManager
-import nat.traversal.upnp.ssdp.{SSDPClientService, SSDPServerService}
-import spray.can.Http
+import nat.traversal.upnp.ssdp.SSDPClientService
 
 
 object Boot

@@ -1,8 +1,8 @@
+.idea/
+target/
 .cache
 .classpath
 .history
 .project
 .settings
-project/project
-project/target
-target
+*.iml

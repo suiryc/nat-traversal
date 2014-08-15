@@ -18,7 +18,7 @@ class Icon(
 ) extends Entity
 {
 
-  override def toString: String = s"(${mimetype})${url}"
+  override def toString: String = s"($mimetype)$url"
 
   override def prettyString(builder: StringBuilder, level: Int)
     : StringBuilder =

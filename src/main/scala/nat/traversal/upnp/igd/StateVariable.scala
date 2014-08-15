@@ -88,7 +88,7 @@ class AllowedValueRange(
 ) extends Entity
 {
 
-  override def toString: String = s"[${minimum},${maximum}]"
+  override def toString: String = s"[$minimum,$maximum]"
 
   override def prettyString(builder: StringBuilder, level: Int)
     : StringBuilder =

@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.util.{Success, Failure}
 import scala.xml.NodeSeq
 import spray.client.pipelining._
-import spray.http.{HttpRequest, HttpResponse}
+import spray.http.HttpRequest
 import nat.traversal.upnp.igd.{GatewayDevice, GatewayDeviceDesc, Protocol}
 
 
@@ -26,27 +26,27 @@ object SSDPClientService extends Logging {
   private case class DeviceDescription(node: NodeSeq, base: URL, localAddress: InetSocketAddress)
 
   def discover(implicit system: ActorSystem) {
-    for (address <- getInetAddresses()) {
-      logger.debug(s"SSDP discover on ${address}")
+    for (address <- getInetAddresses) {
+      logger.debug(s"SSDP discover on $address")
 
       /* Note: we need one actor per interface, because it is bound to the
        * concerned socket. */
       implicit val ssdpClientService = system.actorOf(Props[SSDPClientService],
-        s"upnp-service-ssdp-client-${address.getHostAddress()}")
+        s"upnp-service-ssdp-client-${address.getHostAddress}")
 
       IO(Udp) ! Udp.Bind(ssdpClientService, new InetSocketAddress(address, 0))
     }
   }
 
-  private def getNetworkInterfaces(): List[NetworkInterface] =
+  private def getNetworkInterfaces: List[NetworkInterface] =
     try {
       import scala.collection.JavaConversions._
 
       /* getNetworkInterfaces can return null */
-      Option(NetworkInterface.getNetworkInterfaces()).map(_.toList).
+      Option(NetworkInterface.getNetworkInterfaces).map(_.toList).
         getOrElse(Nil).filter
       { interface =>
-        logger.debug(s"Found interface ${interface}")
+        logger.debug(s"Found interface $interface")
         /* Interface needs to:
          *  - be up
          *  - not be virtual
@@ -54,8 +54,8 @@ object SSDPClientService extends Logging {
          *  - not be point to point: we only want to use local network
          *  - support multicast: since we are about to use it
          */
-        interface.isUp && !interface.isVirtual() && !interface.isLoopback() &&
-        !interface.isPointToPoint() && interface.supportsMulticast()
+        interface.isUp && !interface.isVirtual && !interface.isLoopback &&
+        !interface.isPointToPoint && interface.supportsMulticast()
       }
     }
     catch {
@@ -68,13 +68,13 @@ object SSDPClientService extends Logging {
   {
     import scala.collection.JavaConversions._
 
-    interface.getInetAddresses().toList.filter { address =>
+    interface.getInetAddresses.toList.filter { address =>
       /* Drop IPv6, we don't need/handle it */
       address.isInstanceOf[Inet4Address]
     }
   }
 
-  private def getInetAddresses(): List[InetAddress] =
+  private def getInetAddresses: List[InetAddress] =
     for {
       interface <- getNetworkInterfaces
       address <- getInetAddresses(interface)
@@ -111,17 +111,17 @@ class SSDPClientService
           ByteString(ssdpMsg, "US-ASCII"),
           new InetSocketAddress("239.255.255.250", 1900)
         )
-      context.become(ready(sender, local))
+      context.become(ready(sender(), local))
   }
 
   def ready(socket: ActorRef, localAddress: InetSocketAddress): Receive = {
     case Udp.Received(data, remote) =>
       HTTPParser(data.utf8String) match {
         case Left(failure) =>
-          logger.error(s"SSDP client received invalid message from ${remote.getAddress()}: message[${data.utf8String}] error[s${failure}]")
+          logger.error(s"SSDP client received invalid message from ${remote.getAddress}: message[${data.utf8String}] error[$failure]")
 
         case Right(httpMsg) =>
-          logger.trace(s"SSDP client received message from ${remote.getAddress()}: ${httpMsg.headers}")
+          logger.trace(s"SSDP client received message from ${remote.getAddress}: ${httpMsg.headers}")
           httpMsg match {
             case request: RFC2616.Request =>
             case response: RFC2616.Response =>
@@ -129,7 +129,7 @@ class SSDPClientService
                 (response.headers.getOrElse("St", "") == "urn:schemas-upnp-org:device:InternetGatewayDevice:1"))
               {
                 response.headers.get("Location").foreach { location =>
-                  logger.debug(s"Found SSDP server location: ${location}")
+                  logger.debug(s"Found SSDP server location: $location")
                   /* execution context for futures */
                   import context.dispatcher
                   val pipeline: HttpRequest => Future[NodeSeq] = (
@@ -139,8 +139,8 @@ class SSDPClientService
                   pipeline(Get(location)).onComplete {
                     case Success(x) =>
                       val locationUrl = new URL(location)
-                      val base = new URL(locationUrl.getProtocol(),
-                        locationUrl.getHost(), locationUrl.getPort(), "")
+                      val base = new URL(locationUrl.getProtocol,
+                        locationUrl.getHost, locationUrl.getPort, "")
                       self ! DeviceDescription(x, base, localAddress)
 
                     case Failure(x) =>
@@ -158,12 +158,12 @@ class SSDPClientService
       context.stop(self)
 
     case DeviceDescription(node, base, localAddress) =>
-      logger.trace(s"SSDP client got XML response: [${node}]")
+      logger.trace(s"SSDP client got XML response: [$node]")
       try {
         import context.dispatcher
         val deviceDesc = GatewayDeviceDesc(node, base)
         val builder = new StringBuilder()
-        logger.debug(s"Found gateway device: ${deviceDesc}\n${deviceDesc.prettyString(builder, 0)}")
+        logger.debug(s"Found gateway device: $deviceDesc\n${deviceDesc.prettyString(builder, 0)}")
         val igd = new GatewayDevice(deviceDesc, localAddress)
         for (wanDevice <- igd.wanDevices) {
           for (linkProperties <- wanDevice.linkProperties) {
