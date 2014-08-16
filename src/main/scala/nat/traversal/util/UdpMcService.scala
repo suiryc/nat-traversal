@@ -11,6 +11,12 @@ import java.net.{
 }
 import scala.concurrent.Future
 
+/* XXX - use akka 2.4 ?
+ * https://github.com/akka/akka/issues/13490
+ * https://github.com/akka/akka/pull/15568
+ * https://github.com/akka/akka/blob/master/akka-docs/rst/project/migration-guide-2.3.x-2.4.x.rst
+ */
+
 /* Mimic original Udp class hierarchy */
 object UdpMc {
 
