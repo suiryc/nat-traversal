@@ -80,10 +80,10 @@ trait Entity {
  *
  * `prefix:name:version` in the specs.
  */
-class EntityType(
-  val prefix: String,
-  val name: String,
-  val version: Int
+case class EntityType(
+  prefix: String,
+  name: String,
+  version: Int
 ) extends Entity
 {
 
@@ -106,11 +106,13 @@ class EntityType(
  * Prefix is of the form `urn:schemas-upnp-org:type` where `type` is the type of
  * entity: `device` or `service`.
  */
-abstract class EntityTypeBuilder(entity: String) {
+class EntityTypeBuilder(entity: String) {
+
+  val prefix = s"urn:schemas-upnp-org:$entity"
 
   /** Pattern to split entity type value into prefix, name and version. */
   protected val pattern: Regex =
-    ("^(urn:schemas-upnp-org:" + entity + """):(\p{Alnum}+):([0-9]+)$""").r
+    ("^(" + prefix + """):(\p{Alnum}+):([0-9]+)$""").r
 
   /**
    * Creates a new entity type corresponding to the given value.
@@ -118,14 +120,40 @@ abstract class EntityTypeBuilder(entity: String) {
    * @param value entity type
    * @return entity type object
    */
-  def apply(value: String): EntityType = {
-    val pattern(prefix, name, version) = value
+  def apply(value: String): EntityType =
+    get(value).get
 
-    new EntityType(
+  /**
+   * Creates a new entity type corresponding to the given value.
+   *
+   * @param value entity type
+   * @return Some entity type object, or None
+   */
+  def get(value: String): Option[EntityType] =
+    value match {
+      case pattern(prefix, name, version) =>
+        Some(EntityType(
+          prefix = prefix,
+          name = name,
+          version = version.toInt
+        ))
+
+      case _ =>
+        None
+    }
+
+  /**
+   * Creates a new entity type corresponding to the given values.
+   *
+   * @param name entity name
+   * @param version entity version
+   * @return entity type object
+   */
+  def create(name: String, version: Int) =
+    EntityType(
       prefix = prefix,
       name = name,
       version = version.toInt
     )
-  }
 
 }

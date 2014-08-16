@@ -177,8 +177,11 @@ class SSDPClientService
             for (portMapping <- wanConnection.portMappings)
               println(portMapping)
             wanConnection.addPortMapping(6666)
-            wanConnection.deletePortMapping(6666, Protocol.TCP)
-            wanConnection.deletePortMapping(6666, Protocol.UDP)
+            for (portMapping <- wanConnection.portMappings)
+              println(portMapping)
+            wanConnection.deletePortMapping(6666)
+            for (portMapping <- wanConnection.portMappings)
+              println(portMapping)
           }
         }
       }

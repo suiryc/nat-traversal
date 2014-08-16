@@ -99,13 +99,28 @@ class WANConnection(
       )), "", externalPort, protocol
     )
 
-  /** Deletes a port mapping. */
-  def deletePortMapping(externalPort: Int, protocol: Protocol.Value) =
-    service.action("DeletePortMapping")(Map(
-      "NewRemoteHost" -> "",
-      "NewExternalPort" -> externalPort,
-      "NewProtocol" -> protocol
-    ))
+  /**
+   * Deletes a port mapping.
+   *
+   * @param externalPort external port, 0 for all available ports
+   * @param protocol protocol to map, all if not given
+   */
+  def deletePortMapping(
+    externalPort: Int,
+    protocol: Option[Protocol.Value] = None
+  ) {
+    val _protocols = protocol.map(_ :: Nil).getOrElse(
+      Protocol.TCP :: Protocol.UDP :: Nil
+    )
+
+    for (protocol <- _protocols) {
+      service.action("DeletePortMapping")(Map(
+        "NewRemoteHost" -> "",
+        "NewExternalPort" -> externalPort,
+        "NewProtocol" -> protocol
+      ))
+    }
+  }
 
 }
 
@@ -130,7 +145,7 @@ object Protocol extends Enumeration {
 /**
  * Port mapping info.
  */
-class PortMapping(
+case class PortMapping(
   val remoteHost: String,
   val externalPort: Int,
   val protocol: Protocol.Value,
@@ -169,7 +184,7 @@ object PortMapping extends NodeOps {
    * @return corresponding instance
    */
   def apply(node: Node): PortMapping =
-    new PortMapping(
+    PortMapping(
       remoteHost = getChildValue[String](node, "NewRemoteHost"),
       externalPort = getChildValue[Int](node, "NewExternalPort"),
       protocol = Protocol.withName(getChildValue[String](node, "NewProtocol")),
@@ -192,7 +207,7 @@ object PortMapping extends NodeOps {
   def apply(node: Node, remoteHost: String, externalPort: Int,
       protocol: Protocol.Value)
     : PortMapping =
-    new PortMapping(
+    PortMapping(
       remoteHost = remoteHost,
       externalPort = externalPort,
       protocol = protocol,
