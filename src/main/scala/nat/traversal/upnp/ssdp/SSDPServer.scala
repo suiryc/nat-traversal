@@ -424,14 +424,17 @@ class SSDPServerService
                 (request.requestURI == "*") &&
                 (request.headers.getOrElse("St", "") == "urn:schemas-upnp-org:device:InternetGatewayDevice:1")
               ) {
+                /* XXX - move up to share with others */
+                val conf = ConfigFactory.load()
+                val serverDesc = conf.getString("spray.can.server.server-header")
                 val msg =
                   "HTTP/1.1 200 OK\r\n" +
-                  "SERVER: DummyOS/1.0 UPnP/1.0 dummyigdd/1.0\r\n" +
+                  "SERVER: " + serverDesc + "\r\n" +
                   "LOCATION: http://192.168.0.16:5678/desc/root\r\n" +
                   "EXT:\r\n" +
                   "CACHE-CONTROL: max-age=1800\r\n" +
                   "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n" +
-                  "USN: uuid:igd73616d61-6a65-7374-650a-0007cbce1dc0::urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n" +
+                  "USN: uuid:igd01234567-0123-0123-0123-0123456789ab::urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n" +
                   "\r\n"
                 socket ! Udp.Send(ByteString(msg, "US-ASCII"), remote)
               }
