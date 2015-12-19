@@ -1,102 +1,58 @@
-organization  := "nat.traversal"
+import sbt._
+import Keys._
 
-name          := "nat-traversal"
-
-version       := "0.3-SNAPSHOT"
-
-scalaVersion  := "2.11.2"
-
-scalacOptions ++= Seq("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings")
-
-resolvers ++= Seq(
-  "spray repo" at "http://repo.spray.io/",
-  "spray nightly repo" at "http://nightlies.spray.io"
+lazy val versions = Map[String, String](
+  "akka"                     -> "2.4.1",
+  "grizzled"                 -> "1.0.2",
+  "java"                     -> "1.8",
+  "logback"                  -> "1.1.3",
+  "nat-traversal"            -> "0.3-SNAPSHOT",
+  "scala"                    -> "2.11.7",
+  "scala-parser-combinators" -> "1.0.4",
+  "scala-xml"                -> "1.0.5",
+  "slf4j"                    -> "1.7.13",
+  "specs2"                   -> "2.3.13",
+  "spray"                    -> "1.3.1"
 )
 
-val versions = Map[String, String](
-  "akka" -> "2.3.4",
-  "grizzled" -> "1.0.2",
-  "java" -> "1.8",
-  "logback" -> "1.1.2",
-  "scala-parser-combinators" -> "1.0.2",
-  "scala-xml" -> "1.0.2",
-  "slf4j" -> "1.7.7",
-  "specs2" -> "2.3.13",
-  "spray" -> "1.3.1",
-  "maven-compiler-plugin" -> "3.1",
-  "maven-surefire-plugin" -> "2.17",
-  "scala-maven-plugin" -> "3.1.6"
-)
 
-libraryDependencies ++= Seq(
-  "org.slf4j"           %   "slf4j-api"     % versions("slf4j"),
-  "org.clapper"         %% "grizzled-slf4j" % versions("grizzled"),
-  "ch.qos.logback"      %   "logback-classic" % versions("logback"),
-  "org.scala-lang.modules" %% "scala-parser-combinators" % versions("scala-parser-combinators"),
-  "org.scala-lang.modules" %% "scala-xml"   % versions("scala-xml"),
-  "io.spray"            %%  "spray-can"     % versions("spray"),
-  "io.spray"            %%  "spray-client"  % versions("spray"),
-  "io.spray"            %%  "spray-routing" % versions("spray"),
-  "io.spray"            %%  "spray-testkit" % versions("spray") % "test",
-  "com.typesafe.akka"   %%  "akka-actor"    % versions("akka"),
-  "com.typesafe.akka"   %%  "akka-slf4j"    % versions("akka"),
-  "com.typesafe.akka"   %%  "akka-testkit"  % versions("akka") % "test",
-  "org.specs2"          %%  "specs2"        % versions("specs2") % "test"
-)
+lazy val natTraversal = project.in(file(".")).
+  settings(
+    organization := "nat.traversal",
+    name := "nat-traversal",
+    version := versions("nat-traversal"),
+    scalaVersion := versions("scala"),
 
-Seq(Revolver.settings: _*)
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-feature",
+      "-optimize",
+      "-unchecked",
+      "-Yinline-warnings"
+    ),
+    scalacOptions in (Compile, doc) ++= Seq("-diagrams", "-implicits"),
+    resolvers ++= Seq(
+      Resolver.mavenLocal,
+      "spray repo" at "http://repo.spray.io/",
+      "spray nightly repo" at "http://nightlies.spray.io"
+    ),
 
+    libraryDependencies ++= Seq(
+      "ch.qos.logback"         %  "logback-classic"          % versions("logback"),
+      "com.typesafe.akka"      %% "akka-actor"               % versions("akka"),
+      "com.typesafe.akka"      %% "akka-slf4j"               % versions("akka"),
+      "com.typesafe.akka"      %% "akka-testkit"             % versions("akka")                     % "test",
+      "io.spray"               %% "spray-can"                % versions("spray"),
+      "io.spray"               %% "spray-client"             % versions("spray"),
+      "io.spray"               %% "spray-routing"            % versions("spray"),
+      "io.spray"               %% "spray-testkit"            % versions("spray")                    % "test",
+      "org.clapper"            %% "grizzled-slf4j"           % versions("grizzled"),
+      "org.scala-lang.modules" %% "scala-parser-combinators" % versions("scala-parser-combinators"),
+      "org.scala-lang.modules" %% "scala-xml"                % versions("scala-xml"),
+      "org.slf4j"              %  "slf4j-api"                % versions("slf4j"),
+      "org.specs2"             %% "specs2"                   % versions("specs2")                   % "test"
+    ),
 
-pomExtra := (
-  <properties>
-    <encoding>UTF-8</encoding>
-  </properties>
-  <build>
-    <sourceDirectory>src/main/scala</sourceDirectory>
-    <testSourceDirectory>src/test/scala</testSourceDirectory>
-    <plugins>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>{ versions("scala-maven-plugin") }</version>
-        <configuration>
-          <args>
-            <arg>-deprecation</arg>
-            <arg>-feature</arg>
-            <arg>-Yinline-warnings</arg>
-            <arg>-optimize</arg>
-            <arg>-unchecked</arg>
-          </args>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>{ versions("maven-compiler-plugin") }</version>
-        <configuration>
-          <source>{ versions("java") }</source>
-          <target>{ versions("java") }</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>{ versions("maven-surefire-plugin") }</version>
-        <configuration>
-          <includes>
-            <include>**/*Suite.class</include>
-          </includes>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-)
-
+    publishMavenStyle := true,
+    publishTo := Some(Resolver.mavenLocal)
+  )
