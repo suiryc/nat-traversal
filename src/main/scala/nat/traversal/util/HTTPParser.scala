@@ -30,10 +30,10 @@ class RFC2616 extends RegexParsers {
 
   def message =
     requestLine ~ (headers <~ CRLF) ~ text ^^ {
-      case (method ~ _ ~ requestURI ~ _ ~ httpVersion) ~ hd ~ txt =>
+      case (method ~ _ ~ requestURI ~ _ ~ _) ~ hd ~ txt =>
         new RFC2616.Request(method, requestURI, hd, txt)
     } | statusLine ~ (headers <~ CRLF) ~ text ^^ {
-      case (httpVersion ~ _ ~ statusCode ~ _ ~ reasonPhrase) ~ hd ~ txt =>
+      case (_ ~ _ ~ statusCode ~ _ ~ reasonPhrase) ~ hd ~ txt =>
         new RFC2616.Response(Integer.valueOf(statusCode), reasonPhrase, hd, txt)
     }
 

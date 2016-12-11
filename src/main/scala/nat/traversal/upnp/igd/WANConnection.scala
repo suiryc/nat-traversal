@@ -1,6 +1,6 @@
 package nat.traversal.upnp.igd
 
-import akka.actor.ActorRefFactory
+import akka.actor.ActorSystem
 import java.text.SimpleDateFormat
 import java.util.Date
 import nat.traversal.util.{NodeConverters, NodeOps}
@@ -13,21 +13,21 @@ import scala.xml.Node
 class WANConnection(
   val device: WANDevice,
   val service: Service
-)(implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+)(implicit system: ActorSystem, executionContext: ExecutionContext)
 {
 
   /** Gets connection status. */
-  def status = ConnectionStatus.withName(
-    (service.action("GetStatusInfo")() \ "NewConnectionStatus")(0).text.
+  def status: _root_.nat.traversal.upnp.igd.ConnectionStatus.Value = ConnectionStatus.withName(
+    (service.action("GetStatusInfo")() \ "NewConnectionStatus").head.text.
     toLowerCase.capitalize
   )
 
   /** Gets connection external IP address. */
-  def externalIPAddress =
-    (service.action("GetExternalIPAddress")() \ "NewExternalIPAddress")(0).text
+  def externalIPAddress: String =
+    (service.action("GetExternalIPAddress")() \ "NewExternalIPAddress").head.text
 
   /** Gets connection port mappings. */
-  def portMappings = {
+  def portMappings: List[PortMapping] = {
     def loop(idx: Int, mappings: List[PortMapping]): List[PortMapping] = try {
       val result = service.action("GetGenericPortMappingEntry")(
         Map("NewPortMappingIndex" -> idx)
@@ -36,7 +36,7 @@ class WANConnection(
       loop(idx + 1, PortMapping(result) :: mappings)
     }
     catch {
-      case e: Throwable =>
+      case _: Throwable =>
         mappings
     }
 
@@ -146,14 +146,14 @@ object Protocol extends Enumeration {
  * Port mapping info.
  */
 case class PortMapping(
-  val remoteHost: String,
-  val externalPort: Int,
-  val protocol: Protocol.Value,
-  val internalPort: Int,
-  val internalClient: String,
-  val enabled: Boolean,
-  val description: String,
-  val leaseDuration: Int
+  remoteHost: String,
+  externalPort: Int,
+  protocol: Protocol.Value,
+  internalPort: Int,
+  internalClient: String,
+  enabled: Boolean,
+  description: String,
+  leaseDuration: Int
 )
 {
 

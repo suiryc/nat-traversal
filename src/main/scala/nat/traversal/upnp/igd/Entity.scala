@@ -46,7 +46,7 @@ trait Entity {
         builder.append("\n")
         entity.prettyString(builder, level + 1)
 
-      case list: List[_] if (list.isEmpty) =>
+      case list: List[_] if list.isEmpty =>
         builder.append(" None\n")
 
       case list: List[_] =>

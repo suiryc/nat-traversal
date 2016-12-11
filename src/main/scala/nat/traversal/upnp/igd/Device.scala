@@ -1,6 +1,7 @@
 package nat.traversal.upnp.igd
 
-import akka.actor.ActorRefFactory
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import java.net.{InetSocketAddress, URL}
 import nat.traversal.util.{NodeConverters, NodeOps}
 import scala.concurrent.ExecutionContext
@@ -12,7 +13,7 @@ import scala.xml.NodeSeq
 class Device(
   val desc: DeviceDesc,
   val localAddress: InetSocketAddress
-)(implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+)(implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
   extends NodeOps
 {
 
@@ -42,7 +43,7 @@ class Device(
           }
       }
       catch {
-        case e: Throwable =>
+        case _: Throwable =>
           None
       }
     } else None
@@ -157,7 +158,7 @@ object DeviceDesc extends NodeOps {
    * @return corresponding instance
    */
   def apply(node: NodeSeq, base: URL)
-    (implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+    (implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
     : DeviceDesc =
   {
     val deviceType: EntityType = DeviceType(

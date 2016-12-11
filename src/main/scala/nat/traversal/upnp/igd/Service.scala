@@ -1,22 +1,25 @@
 package nat.traversal.upnp.igd
 
-import akka.actor.ActorRefFactory
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding._
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.Materializer
 import java.net.URL
 import nat.traversal.util.{NodeConverters, NodeOps}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
-import scala.xml.NodeSeq
-import spray.client.pipelining._
-import spray.http.HttpRequest
+import scala.xml.{Node, NodeSeq}
 
 /**
  * Device service.
  */
 class Service(val info: ServiceInfo)
-  (implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+  (implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
 {
 
-  val desc = info.desc
+  val desc: ServiceDesc = info.desc
 
   val actionList: List[Action] =
     desc.actionList.map { actionInfo =>
@@ -39,13 +42,13 @@ class Service(val info: ServiceInfo)
    * @param args action arguments
    * @return action response node
    */
-  def action(name: String)(args: Map[String, Any] = Map.empty) =
+  def action(name: String)(args: Map[String, Any] = Map.empty): Node =
     getAction(name).get.apply(args) match {
       case Left(e) =>
         throw e
 
       case Right(result) =>
-        (result \ "Body" \ s"${name}Response")(0)
+        (result \ "Body" \ s"${name}Response").head
     }
 
 }
@@ -100,7 +103,7 @@ object ServiceInfo extends NodeOps {
    * @return corresponding instance
    */
   def apply(node: NodeSeq, base: URL)
-    (implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+    (implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
     : ServiceInfo =
   {
     val serviceType: EntityType = ServiceType(
@@ -114,13 +117,13 @@ object ServiceInfo extends NodeOps {
       new URL(base, getChildValue[String](node, "controlURL"))
     val eventSubURL: URL =
       new URL(base, getChildValue[String](node, "eventSubURL"))
-    val pipeline: HttpRequest => Future[NodeSeq] = (
-      sendReceive
-      ~> unmarshal[NodeSeq]
-    )
+    val request = Get(SCPDURL.toString)
+    val response = Http().singleRequest(request).flatMap { response =>
+      Unmarshal(response.entity).to[NodeSeq]
+    }
     /* XXX - timeout */
     val descNode = Await.result(
-      pipeline(Get(SCPDURL.toString)),
+      response,
       Duration.Inf
     )
     val desc: ServiceDesc = ServiceDesc(descNode)

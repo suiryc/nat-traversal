@@ -1,32 +1,24 @@
 package nat.traversal.upnp.ssdp
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.Connection
+import akka.http.scaladsl.server.{ExceptionHandler, Route}
+import akka.http.scaladsl.server.Directives._
 import akka.io.{IO, Udp}
+import akka.io.Inet.{DatagramChannelCreator, SocketOptionV2}
+import akka.stream.Materializer
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import grizzled.slf4j.Logging
-import java.net.{InetAddress, MulticastSocket}
+import java.net._
+import java.nio.channels.DatagramChannel
 import nat.traversal.upnp.UPnPManager
-import nat.traversal.upnp.igd.{
-  ConnectionStatus,
-  EntityType,
-  PortMapping,
-  Protocol,
-  ServiceType
-}
-import nat.traversal.util.{
-  HTTPParser,
-  NodeConverters,
-  NodeOps,
-  RFC2616,
-  UdpMc,
-  UdpMcService
-}
-import scala.xml.{Elem, Node, NodeSeq, Null, PrefixedAttribute, Text, TopScope}
-import spray.can.Http
-import spray.http.{MediaTypes, StatusCodes}
-import spray.http.HttpHeaders.Connection
-import spray.routing.{ExceptionHandler, HttpService}
+import nat.traversal.upnp.igd._
+import nat.traversal.util._
+import scala.xml._
 
 
 case class RequestException(msg: String = null, cause: Throwable = null)
@@ -52,7 +44,7 @@ case class MockDevice(id: String)
 
   private var portMappings: List[PortMapping] = Nil
 
-  val descRoot = "<?xml version=\"1.0\"?>" +
+  val descRoot: String = "<?xml version=\"1.0\"?>" +
     <root xmlns="urn:schemas-upnp-org:device-1-0">
       <specVersion>
         <major>1</major>
@@ -115,7 +107,7 @@ case class MockDevice(id: String)
       </device>
     </root>
 
-  val descWANC = "<?xml version=\"1.0\"?>" +
+  val descWANC: String = "<?xml version=\"1.0\"?>" +
     <scpd xmlns="urn:schemas-upnp-org:service-1-0">
       <specVersion>
         <major>1</major>
@@ -441,11 +433,11 @@ case class MockDevice(id: String)
         handler(serviceType, request, node)
       }.getOrElse {
         error(s"Unhandled service[$service] action[$request]")
-        throw new RequestException()
+        throw RequestException()
       }
     }.getOrElse {
       error(s"Unhandled service[$service]")
-      throw new RequestException()
+      throw RequestException()
     }
   }
 
@@ -487,7 +479,7 @@ case class MockDevice(id: String)
     val idx = getChildValue[Int](node, "NewPortMappingIndex")
     val mapping = portMappings.lift(idx).getOrElse {
       /* Out of bound */
-      throw new RequestException()
+      throw RequestException()
     }
 
     val args = Map[String, Any](
@@ -554,8 +546,7 @@ case class MockDevice(id: String)
  * Allows separate testing without having to create a whole system.
  */
 trait SSDPServerHttp
-  extends HttpService
-  with NodeOps
+  extends NodeOps
   with Logging
 {
 
@@ -568,16 +559,18 @@ trait SSDPServerHttp
       }
   }
 
-  val myRoute =
+  private def xmlResponse(body: String): HttpEntity.Strict = {
+    HttpEntity(ContentTypes.`text/xml(UTF-8)`, body)
+  }
+
+  val myRoute: Route =
     /* XXX - use device UUID as path prefix (would allow to have more than one mock device) */
-    requestUri { uri =>
+    extractUri { uri =>
       path("desc" / "root") {
         get {
           respondWithHeader(Connection("close")) {
-            respondWithMediaType(MediaTypes.`text/xml`) {
-              complete {
-                device.descRoot
-              }
+            complete {
+              xmlResponse(device.descRoot)
             }
           }
         }
@@ -585,10 +578,8 @@ trait SSDPServerHttp
       path("desc" / "wan_ip_connection") {
         get {
           respondWithHeader(Connection("close")) {
-            respondWithMediaType(MediaTypes.`text/xml`) {
-              complete {
-                device.descWANC
-              }
+            complete {
+              xmlResponse(device.descWANC)
             }
           }
         }
@@ -607,7 +598,7 @@ trait SSDPServerHttp
                           getChildOption(body, request)
                         }.fold {
                           error(s"Posted SOAP action[$soapAction] body is malformed for path[${uri.path}]")
-                          failWith(new RequestException())
+                          failWith(RequestException())
                         } { requestNode =>
                           complete {
                             device.handleRequest(serviceType, request, requestNode)
@@ -617,16 +608,16 @@ trait SSDPServerHttp
 
                     case None =>
                       error(s"Posted SOAP action service[$service] is malformed for path[${uri.path}]")
-                      failWith(new RequestException())
+                      failWith(RequestException())
                   }
 
                 case _ =>
                   error(s"Posted SOAPACTION[$soapAction] header is not of the form ServicePath#ActionName for path[${uri.path}]")
-                  failWith(new RequestException())
+                  failWith(RequestException())
               }
             }.getOrElse {
               error(s"Missing SOAPACTION header for path[${uri.path}]")
-              failWith(new RequestException())
+              failWith(RequestException())
             }
           }
         }
@@ -635,24 +626,21 @@ trait SSDPServerHttp
 
 }
 
-class SSDPServerService 
+class SSDPServerService(implicit system: ActorSystem, materializer: Materializer)
   extends Actor
   with SSDPServerHttp
 {
 
-  /* the HttpService trait defines only one abstract member, which
-   * connects the services environment to the enclosing actor or test */
-  def actorRefFactory = context
-
-  def httpReceive = runRoute {
-    handleExceptions(exceptionHandler) {
-      myRoute
-    }
+  val route: Route = handleExceptions(exceptionHandler) {
+    myRoute
   }
 
-  def receive = httpReceive orElse {
-    case UdpMc.Bound =>
-      context.become(ready(sender()) orElse httpReceive)
+  // We shamelessly handle Udp directly in the actor and Http through its route
+  Http().bindAndHandle(route, interface = "0.0.0.0", port = 5678)
+
+  def receive: Receive = {
+    case Udp.Bound(_) =>
+      context.become(ready(sender()))
   }
 
   def ready(socket: ActorRef): Receive = {
@@ -672,7 +660,7 @@ class SSDPServerService
               ) {
                 /* XXX - move up to share with others */
                 val conf = ConfigFactory.load()
-                val serverDesc = conf.getString("spray.can.server.server-header")
+                val serverDesc = conf.getString("akka.http.server.server-header")
                 val msg =
                   "HTTP/1.1 200 OK\r\n" +
                   "SERVER: " + serverDesc + "\r\n" +
@@ -692,8 +680,10 @@ class SSDPServerService
 
     case Udp.Unbind =>
       socket ! Udp.Unbind
+      // XXX - stop Http service too
 
     case Udp.Unbound =>
+      // XXX - only stop once Http down too ?
       context.stop(self)
   }
 
@@ -701,23 +691,41 @@ class SSDPServerService
 
 object SSDPServerService {
 
-  implicit val system = UPnPManager.system
+  import UPnPManager.system
+  import UPnPManager.materializer
 
-  val ssdpServerService = system.actorOf(Props[SSDPServerService], "upnp-service-ssdp-server")
-  val udpService = system.actorOf(Props[UdpMcService], "upnp-service-udp")
+  val ssdpServerService: ActorRef = system.actorOf(props, "upnp-service-ssdp-server")
 
   def start() {
-    IO(Http) ! Http.Bind(ssdpServerService, interface = "0.0.0.0", port = 5678)
-
-    val socket = new MulticastSocket(1900)
-    socket.joinGroup(InetAddress.getByName("239.255.255.250"))
-
+    // The 'Bound' response is sent to the sender of the 'Bind' request
     implicit val sender = ssdpServerService
-    udpService ! UdpMc.Bind(ssdpServerService, socket)
+
+    // For UDP Multicast support, see: http://doc.akka.io/docs/akka/2.4.14/scala/io-udp.html#UDP_Multicast
+    SSDPClientService.getNetworkInterfaces.headOption.foreach { interface =>
+      val opts = List(InetProtocolFamily(), MulticastGroup("239.255.255.250", interface))
+      IO(Udp) ! Udp.Bind(ssdpServerService, new InetSocketAddress(1900), opts)
+    }
   }
 
   def stop() {
     ssdpServerService ! Udp.Unbind
+  }
+
+  final case class InetProtocolFamily() extends DatagramChannelCreator {
+    override def create(): DatagramChannel =
+      DatagramChannel.open(StandardProtocolFamily.INET)
+  }
+
+  final case class MulticastGroup(address: String, interface: NetworkInterface) extends SocketOptionV2 {
+    override def afterBind(s: DatagramSocket) {
+      val group = InetAddress.getByName(address)
+      s.getChannel.join(group, interface)
+      ()
+    }
+  }
+
+  def props(implicit system: ActorSystem, materializer: Materializer): Props = {
+    Props(new SSDPServerService)
   }
 
 }

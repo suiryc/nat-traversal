@@ -1,44 +1,39 @@
 package nat.traversal.upnp.ssdp
 
-import java.net.{
-  InetAddress,
-  Inet4Address,
-  InetSocketAddress,
-  NetworkInterface
-}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding._
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.io.{IO, Udp}
+import akka.stream.Materializer
 import akka.util.ByteString
 import grizzled.slf4j.Logging
-import java.net.URL
-import nat.traversal.util.HTTPParser
-import nat.traversal.util.RFC2616
-import scala.concurrent.Future
-import scala.util.{Success, Failure}
+import java.net.{Inet4Address, InetAddress, InetSocketAddress, NetworkInterface, URL}
+import nat.traversal.upnp.igd.{GatewayDevice, GatewayDeviceDesc}
+import nat.traversal.util.{HTTPParser, RFC2616}
+import scala.util.{Failure, Success}
 import scala.xml.NodeSeq
-import spray.client.pipelining._
-import spray.http.HttpRequest
-import nat.traversal.upnp.igd.{GatewayDevice, GatewayDeviceDesc, Protocol}
 
 
 object SSDPClientService extends Logging {
 
   private case class DeviceDescription(node: NodeSeq, base: URL, localAddress: InetSocketAddress)
 
-  def discover(implicit system: ActorSystem) {
+  def discover(implicit system: ActorSystem, materializer: Materializer) {
     for (address <- getInetAddresses) {
       logger.debug(s"SSDP discover on $address")
 
       /* Note: we need one actor per interface, because it is bound to the
        * concerned socket. */
-      implicit val ssdpClientService = system.actorOf(Props[SSDPClientService],
+      implicit val ssdpClientService = system.actorOf(props,
         s"upnp-service-ssdp-client-${address.getHostAddress}")
 
       IO(Udp) ! Udp.Bind(ssdpClientService, new InetSocketAddress(address, 0))
     }
   }
 
-  private def getNetworkInterfaces: List[NetworkInterface] =
+  private[ssdp] def getNetworkInterfaces: List[NetworkInterface] =
     try {
       import scala.collection.JavaConversions._
 
@@ -80,15 +75,20 @@ object SSDPClientService extends Logging {
       address <- getInetAddresses(interface)
     } yield address
 
+  def props(implicit materializer: Materializer): Props = {
+    Props(new SSDPClientService)
+  }
+
 }
 
 
-class SSDPClientService
+class SSDPClientService(implicit materializer: Materializer)
   extends Actor
   with Logging
 {
 
   import SSDPClientService._
+  import context.system
 
   /* http://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol
    * http://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol
@@ -104,7 +104,7 @@ class SSDPClientService
     "MX: 1\r\n" +
     "\r\n"
 
-  def receive = {
+  def receive: Receive = {
     case Udp.Bound(local) =>
       /* Send the unicast request to discover gateways */
       sender ! Udp.Send(
@@ -123,7 +123,7 @@ class SSDPClientService
         case Right(httpMsg) =>
           logger.trace(s"SSDP client received message from ${remote.getAddress}: ${httpMsg.headers}")
           httpMsg match {
-            case request: RFC2616.Request =>
+            case _: RFC2616.Request =>
             case response: RFC2616.Response =>
               if ((response.statusCode == 200) &&
                 (response.headers.getOrElse("St", "") == "urn:schemas-upnp-org:device:InternetGatewayDevice:1"))
@@ -132,18 +132,18 @@ class SSDPClientService
                   logger.debug(s"Found SSDP server location: $location")
                   /* execution context for futures */
                   import context.dispatcher
-                  val pipeline: HttpRequest => Future[NodeSeq] = (
-                    sendReceive
-                    ~> unmarshal[NodeSeq]
-                  )
-                  pipeline(Get(location)).onComplete {
+                  val request = Get(location)
+                  val response = Http().singleRequest(request).flatMap { response =>
+                    Unmarshal(response.entity).to[NodeSeq]
+                  }
+                  response.onComplete {
                     case Success(x) =>
                       val locationUrl = new URL(location)
                       val base = new URL(locationUrl.getProtocol,
                         locationUrl.getHost, locationUrl.getPort, "")
                       self ! DeviceDescription(x, base, localAddress)
 
-                    case Failure(x) =>
+                    case Failure(_) =>
                       /* XXX */
                   }
                 }

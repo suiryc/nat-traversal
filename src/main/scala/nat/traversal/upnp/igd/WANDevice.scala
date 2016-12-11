@@ -1,6 +1,7 @@
 package nat.traversal.upnp.igd
 
-import akka.actor.ActorRefFactory
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
 
@@ -10,7 +11,7 @@ import scala.concurrent.ExecutionContext
 class WANDevice(
   override val desc: DeviceDesc,
   override val localAddress: InetSocketAddress
-)(implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+)(implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
   extends Device(desc, localAddress)
 {
 
@@ -20,7 +21,7 @@ class WANDevice(
    */
 
   val wanConnections: List[WANConnection] =
-    getDevices("WANConnectionDevice").map { cnxDevice =>
+    getDevices("WANConnectionDevice").flatMap { cnxDevice =>
       (for {
         cnxService <- cnxDevice.getServices("WANIPConnection") :::
           cnxDevice.getServices("WANPPPConnection")
@@ -29,10 +30,10 @@ class WANDevice(
           Some(new WANConnection(this, cnxService))
         }
         catch {
-          case e: Throwable =>
+          case _: Throwable =>
             None
         }
       }).flatten
-    }.flatten
+    }
 
 }

@@ -2,17 +2,17 @@ import sbt._
 import Keys._
 
 lazy val versions = Map[String, String](
-  "akka"                     -> "2.4.1",
-  "grizzled"                 -> "1.0.2",
+  "akka"                     -> "2.4.14",
+  "akka-http"                -> "10.0.0",
+  "grizzled"                 -> "1.3.0",
   "java"                     -> "1.8",
-  "logback"                  -> "1.1.3",
+  "logback"                  -> "1.1.8",
   "nat-traversal"            -> "0.3-SNAPSHOT",
-  "scala"                    -> "2.11.7",
+  "scala"                    -> "2.11.8",
   "scala-parser-combinators" -> "1.0.4",
   "scala-xml"                -> "1.0.5",
-  "slf4j"                    -> "1.7.13",
-  "specs2"                   -> "2.3.13",
-  "spray"                    -> "1.3.1"
+  "scalatest"                -> "3.0.1",
+  "slf4j"                    -> "1.7.21"
 )
 
 
@@ -25,10 +25,21 @@ lazy val natTraversal = project.in(file(".")).
 
     scalacOptions ++= Seq(
       "-deprecation",
+      "-encoding", "UTF-8",
       "-feature",
-      "-optimize",
       "-unchecked",
-      "-Yinline-warnings"
+      "-Xfatal-warnings",
+      "-Xlint",
+      "-Yno-adapted-args",
+      "-Ywarn-numeric-widen",
+      "-Ywarn-value-discard",
+      "-Ywarn-inaccessible",
+      "-Ywarn-infer-any",
+      "-Ywarn-dead-code",
+      "-Ywarn-nullary-override",
+      "-Ywarn-nullary-unit",
+      "-Ywarn-unused",
+      "-Ywarn-unused-import"
     ),
     scalacOptions in (Compile, doc) ++= Seq("-diagrams", "-implicits"),
     resolvers ++= Seq(
@@ -40,17 +51,17 @@ lazy val natTraversal = project.in(file(".")).
     libraryDependencies ++= Seq(
       "ch.qos.logback"         %  "logback-classic"          % versions("logback"),
       "com.typesafe.akka"      %% "akka-actor"               % versions("akka"),
+      "com.typesafe.akka"      %% "akka-http"                % versions("akka-http"),
+      "com.typesafe.akka"      %% "akka-http-core"           % versions("akka-http"),
+      "com.typesafe.akka"      %% "akka-http-testkit"        % versions("akka-http"),
+      "com.typesafe.akka"      %% "akka-http-xml"            % versions("akka-http"),
       "com.typesafe.akka"      %% "akka-slf4j"               % versions("akka"),
       "com.typesafe.akka"      %% "akka-testkit"             % versions("akka")                     % "test",
-      "io.spray"               %% "spray-can"                % versions("spray"),
-      "io.spray"               %% "spray-client"             % versions("spray"),
-      "io.spray"               %% "spray-routing"            % versions("spray"),
-      "io.spray"               %% "spray-testkit"            % versions("spray")                    % "test",
       "org.clapper"            %% "grizzled-slf4j"           % versions("grizzled"),
       "org.scala-lang.modules" %% "scala-parser-combinators" % versions("scala-parser-combinators"),
       "org.scala-lang.modules" %% "scala-xml"                % versions("scala-xml"),
-      "org.slf4j"              %  "slf4j-api"                % versions("slf4j"),
-      "org.specs2"             %% "specs2"                   % versions("specs2")                   % "test"
+      "org.scalatest"          %% "scalatest"                % versions("scalatest")                % "test",
+      "org.slf4j"              %  "slf4j-api"                % versions("slf4j")
     ),
 
     publishMavenStyle := true,

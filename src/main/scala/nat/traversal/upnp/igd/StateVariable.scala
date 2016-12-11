@@ -18,7 +18,7 @@ class StateVariable(
 ) extends Entity
 {
 
-  override def toString = name
+  override def toString: String = name
 
   override def prettyString(builder: StringBuilder, level: Int)
     : StringBuilder =

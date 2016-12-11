@@ -5,10 +5,7 @@ import nat.traversal.upnp.UPnPManager
 import nat.traversal.upnp.ssdp.SSDPClientService
 
 
-object Boot
-  extends App
-  with Logging
-{
+object Boot extends Logging {
 
   /* It's useful to get a logger here, so that logging system gets initialized.
    * Otherwise we are likely to get messages about loggers not working because
@@ -16,10 +13,16 @@ object Boot
    * See: http://www.slf4j.org/codes.html#substituteLogger
    */
 
-  UPnPManager.startServer()
+  import UPnPManager.system
+  import UPnPManager.materializer
 
-  SSDPClientService.discover(UPnPManager.system)
+  def main(args: Array[String]): Unit = {
+    UPnPManager.startServer()
 
-  //Thread.sleep(10000)
-  //UPnPManager.stopServer()
+    SSDPClientService.discover
+
+    //Thread.sleep(10000)
+    //UPnPManager.stopServer()
+  }
+
 }

@@ -1,12 +1,16 @@
 package nat.traversal.upnp.igd
 
-import akka.actor.ActorRefFactory
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding._
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.http.scaladsl.model.headers.RawHeader
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.Materializer
 import nat.traversal.util.{NodeConverters, NodeOps}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
 import scala.xml.{Elem, NodeSeq, Null, PrefixedAttribute, Text, TopScope}
-import spray.client.pipelining._
-import spray.http.HttpRequest
 
 /**
  * Service action.
@@ -24,7 +28,7 @@ class Action(
    * @return response, or error
    */
   def apply(args: Map[String, Any] = Map.empty)
-    (implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+    (implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
     : Either[Throwable, NodeSeq] =
   {
     val node: NodeSeq = info.argumentList.filter { argument =>
@@ -35,24 +39,24 @@ class Action(
       }.getOrElse(Elem(null, argument.name, Null, TopScope, minimizeEmpty = false))
     }
 
-    val request = wrap(node)
-    /* If we had the string representation of an XML content, we could define
+    val requestBody = wrap(node)
+    /* (legacy note with spray implementation)
+     * If we had the string representation of an XML content, we could define
      * this implicit Marshaller delegation to set the correct Content-Type
      * (instead of the default 'text/plain'):
      *
      * implicit val XMLStringMarshaller =
      *   Marshaller.delegate[String, String](MediaTypes.`text/xml`) { x => x }
      */
-    val pipeline: HttpRequest => Future[NodeSeq] = (
-      addHeader("SOAPACTION", s"${service.info.serviceType}#${info.name}")
-      ~> sendReceive
-      ~> unmarshal[NodeSeq]
-    )
+    val request = Post(service.info.controlURL.toString, requestBody).addHeader(RawHeader("SOAPACTION", s"${service.info.serviceType}#${info.name}"))
+    val response = Http().singleRequest(request).flatMap { response =>
+      Unmarshal(response.entity).to[NodeSeq]
+    }
 
     try {
       Right(
         Await.result(
-          pipeline(Post(service.info.controlURL.toString, request)),
+          response,
           /* XXX - timeout */
           Duration.Inf
         )

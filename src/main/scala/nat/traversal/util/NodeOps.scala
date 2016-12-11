@@ -63,7 +63,7 @@ trait NodeOps extends Logging {
         if (n != 1) {
           logger.debug(s"Found $n occurrences of node[$childName] where 1 expected")
         }
-        Some(children(0))
+        Some(children.head)
     }
   }
 

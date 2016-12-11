@@ -1,6 +1,7 @@
 package nat.traversal.upnp.igd
 
-import akka.actor.ActorRefFactory
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import java.net.{InetSocketAddress, URL}
 import nat.traversal.util.NodeOps
 import scala.concurrent.ExecutionContext
@@ -13,22 +14,22 @@ import scala.xml.NodeSeq
 class GatewayDevice(
   val desc: GatewayDeviceDesc,
   val localAddress: InetSocketAddress
-)(implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+)(implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
 {
 
   val device = new Device(desc.device, localAddress)
 
   /* An IntergetGatewayDevice may have more than one WANDevice. */
-  val wanDevices =
-    device.getDevices("WANDevice").map { wanDevice =>
+  val wanDevices: List[WANDevice] =
+    device.getDevices("WANDevice").flatMap { wanDevice =>
       try {
         Some(new WANDevice(wanDevice.desc, localAddress))
       }
       catch {
-        case e: Throwable =>
+        case _: Throwable =>
           None
       }
-    }.flatten
+    }
 
 }
 
@@ -69,7 +70,7 @@ object GatewayDeviceDesc extends NodeOps {
    * @return corresponding instance
    */
   def apply(node: NodeSeq, base: URL)
-    (implicit refFactory: ActorRefFactory, executionContext: ExecutionContext)
+    (implicit system: ActorSystem, executionContext: ExecutionContext, materializer: Materializer)
     : GatewayDeviceDesc =
   {
     val specVersion: SpecVersion = SpecVersion(
