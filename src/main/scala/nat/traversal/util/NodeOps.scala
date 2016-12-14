@@ -1,6 +1,6 @@
 package nat.traversal.util
 
-import grizzled.slf4j.Logging
+import com.typesafe.scalalogging.StrictLogging
 import scala.xml.{Node, NodeSeq}
 
 /**
@@ -42,7 +42,7 @@ object NodeConverters {
 /**
  * Trait defining helper functions when dealing with XML.
  */
-trait NodeOps extends Logging {
+trait NodeOps extends StrictLogging {
 
   /**
    * Gets child node.

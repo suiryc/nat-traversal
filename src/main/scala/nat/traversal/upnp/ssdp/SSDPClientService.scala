@@ -8,7 +8,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.io.{IO, Udp}
 import akka.stream.Materializer
 import akka.util.ByteString
-import grizzled.slf4j.Logging
+import com.typesafe.scalalogging.StrictLogging
 import java.net.{Inet4Address, InetAddress, InetSocketAddress, NetworkInterface, URL}
 import nat.traversal.upnp.igd.{GatewayDevice, GatewayDeviceDesc}
 import nat.traversal.util.{HTTPParser, RFC2616}
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success}
 import scala.xml.NodeSeq
 
 
-object SSDPClientService extends Logging {
+object SSDPClientService extends StrictLogging {
 
   private case class DeviceDescription(node: NodeSeq, base: URL, localAddress: InetSocketAddress)
 
@@ -84,7 +84,7 @@ object SSDPClientService extends Logging {
 
 class SSDPClientService(implicit materializer: Materializer)
   extends Actor
-  with Logging
+  with StrictLogging
 {
 
   import SSDPClientService._

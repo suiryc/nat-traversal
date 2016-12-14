@@ -1,11 +1,11 @@
 package nat.traversal
 
-import grizzled.slf4j.Logging
+import com.typesafe.scalalogging.StrictLogging
 import nat.traversal.upnp.UPnPManager
 import nat.traversal.upnp.ssdp.SSDPClientService
 
 
-object Boot extends Logging {
+object Boot extends StrictLogging {
 
   /* It's useful to get a logger here, so that logging system gets initialized.
    * Otherwise we are likely to get messages about loggers not working because

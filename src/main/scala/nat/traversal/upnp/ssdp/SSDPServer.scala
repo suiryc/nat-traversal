@@ -12,7 +12,7 @@ import akka.io.Inet.{DatagramChannelCreator, SocketOptionV2}
 import akka.stream.Materializer
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
-import grizzled.slf4j.Logging
+import com.typesafe.scalalogging.StrictLogging
 import java.net._
 import java.nio.channels.DatagramChannel
 import nat.traversal.upnp.UPnPManager
@@ -26,7 +26,7 @@ case class RequestException(msg: String = null, cause: Throwable = null)
 
 case class MockDevice(id: String)
   extends NodeOps
-  with Logging
+  with StrictLogging
 {
 
   import NodeConverters._
@@ -432,11 +432,11 @@ case class MockDevice(id: String)
       handler.get(request).map { handler =>
         handler(serviceType, request, node)
       }.getOrElse {
-        error(s"Unhandled service[$service] action[$request]")
+        logger.error(s"Unhandled service[$service] action[$request]")
         throw RequestException()
       }
     }.getOrElse {
-      error(s"Unhandled service[$service]")
+      logger.error(s"Unhandled service[$service]")
       throw RequestException()
     }
   }
@@ -547,7 +547,7 @@ case class MockDevice(id: String)
  */
 trait SSDPServerHttp
   extends NodeOps
-  with Logging
+  with StrictLogging
 {
 
   val device = MockDevice("01234567-0123-0123-0123-0123456789ab")
@@ -597,7 +597,7 @@ trait SSDPServerHttp
                         getChildOption(node, "Body").flatMap { body =>
                           getChildOption(body, request)
                         }.fold {
-                          error(s"Posted SOAP action[$soapAction] body is malformed for path[${uri.path}]")
+                          logger.error(s"Posted SOAP action[$soapAction] body is malformed for path[${uri.path}]")
                           failWith(RequestException())
                         } { requestNode =>
                           complete {
@@ -607,16 +607,16 @@ trait SSDPServerHttp
                       }
 
                     case None =>
-                      error(s"Posted SOAP action service[$service] is malformed for path[${uri.path}]")
+                      logger.error(s"Posted SOAP action service[$service] is malformed for path[${uri.path}]")
                       failWith(RequestException())
                   }
 
                 case _ =>
-                  error(s"Posted SOAPACTION[$soapAction] header is not of the form ServicePath#ActionName for path[${uri.path}]")
+                  logger.error(s"Posted SOAPACTION[$soapAction] header is not of the form ServicePath#ActionName for path[${uri.path}]")
                   failWith(RequestException())
               }
             }.getOrElse {
-              error(s"Missing SOAPACTION header for path[${uri.path}]")
+              logger.error(s"Missing SOAPACTION header for path[${uri.path}]")
               failWith(RequestException())
             }
           }
